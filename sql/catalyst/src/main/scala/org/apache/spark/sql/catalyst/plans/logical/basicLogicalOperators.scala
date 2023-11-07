@@ -688,7 +688,33 @@ case class InsertIntoDir(
 }
 
 /**
- * A container for holding the view description(CatalogTable) and info whether the view is temporary
+ * A trait for view description used by [[View]] container.
+ */
+trait ViewDescription {
+  val identifier: String
+  val schema: StructType
+  val viewText: Option[String]
+  val viewCatalogAndNamespace: Seq[String]
+  val viewQueryColumnNames: Seq[String]
+  val properties: Map[String, String]
+}
+
+/**
+ * View description backed by a [[CatalogTable]].
+ *
+ * @param metadata a CatalogTable
+ */
+case class CatalogTableViewDescription(metadata: CatalogTable) extends ViewDescription {
+  override val identifier: String = metadata.identifier.quotedString
+  override val schema: StructType = metadata.schema
+  override val viewText: Option[String] = metadata.viewText
+  override val viewCatalogAndNamespace: Seq[String] = metadata.viewCatalogAndNamespace
+  override val viewQueryColumnNames: Seq[String] = metadata.viewQueryColumnNames
+  override val properties: Map[String, String] = metadata.properties
+}
+
+/**
+ * A container for holding the view description and info whether the view is temporary
  * or not. If it's a SQL (temp) view, the child should be a logical plan parsed from the
  * `CatalogTable.viewText`. Otherwise, the view is a temporary one created from a dataframe and the
  * view description should contain a `VIEW_CREATED_FROM_DATAFRAME` property; in this case, the child
@@ -700,10 +726,10 @@ case class InsertIntoDir(
  *             view.
  * @param isTempView A flag to indicate whether the view is temporary or not.
  * @param child The logical plan of a view operator. If the view description is available, it should
- *              be a logical plan parsed from the `CatalogTable.viewText`.
+ *              be a logical plan parsed from the view text.
  */
 case class View(
-    desc: CatalogTable,
+    desc: ViewDescription,
     isTempView: Boolean,
     child: LogicalPlan) extends UnaryNode {
   require(!isTempViewStoringAnalyzedPlan || child.resolved)
@@ -745,6 +771,9 @@ case class View(
 }
 
 object View {
+  def apply(desc: CatalogTable, isTempView: Boolean, child: LogicalPlan): View =
+    View(CatalogTableViewDescription(desc), isTempView, child)
+
   def effectiveSQLConf(configs: Map[String, String], isTempView: Boolean): SQLConf = {
     val activeConf = SQLConf.get
     // For temporary view, we always use captured sql configs

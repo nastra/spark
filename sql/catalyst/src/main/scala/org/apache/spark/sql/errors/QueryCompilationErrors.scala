@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.{SPARK_DOC_ROOT, SparkException, SparkThrowable, SparkThrowableHelper, SparkUnsupportedOperationException}
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.catalyst.{ExtendedAnalysisException, FunctionIdentifier, QualifiedTableName, TableIdentifier}
-import org.apache.spark.sql.catalyst.analysis.{CannotReplaceMissingTableException, FunctionAlreadyExistsException, NamespaceAlreadyExistsException, NoSuchFunctionException, NoSuchNamespaceException, NoSuchPartitionException, NoSuchTableException, ResolvedTable, Star, TableAlreadyExistsException, UnresolvedRegex}
+import org.apache.spark.sql.catalyst.analysis.{CannotReplaceMissingTableException, FunctionAlreadyExistsException, NamespaceAlreadyExistsException, NoSuchFunctionException, NoSuchNamespaceException, NoSuchPartitionException, NoSuchTableException, NoSuchViewException, ResolvedTable, Star, TableAlreadyExistsException, UnresolvedRegex}
 import org.apache.spark.sql.catalyst.catalog.{CatalogTable, InvalidUDFClassException}
 import org.apache.spark.sql.catalyst.catalog.CatalogTypes.TablePartitionSpec
 import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, AttributeSet, CreateMap, CreateStruct, Expression, GroupingID, NamedExpression, SpecifiedWindowFrame, WindowFrame, WindowFunction, WindowSpecDefinition}
@@ -442,17 +442,17 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
       origin = t.origin)
   }
 
-  def insertIntoViewNotAllowedError(identifier: TableIdentifier, t: TreeNode[_]): Throwable = {
+  def insertIntoViewNotAllowedError(identifier: String, t: TreeNode[_]): Throwable = {
     new AnalysisException(
       errorClass = "_LEGACY_ERROR_TEMP_1010",
-      messageParameters = Map("identifier" -> identifier.toString),
+      messageParameters = Map("identifier" -> identifier),
       origin = t.origin)
   }
 
-  def writeIntoViewNotAllowedError(identifier: TableIdentifier, t: TreeNode[_]): Throwable = {
+  def writeIntoViewNotAllowedError(identifier: String, t: TreeNode[_]): Throwable = {
     new AnalysisException(
       errorClass = "_LEGACY_ERROR_TEMP_1011",
-      messageParameters = Map("identifier" -> identifier.toString),
+      messageParameters = Map("identifier" -> identifier),
       origin = t.origin)
   }
 
@@ -1318,6 +1318,10 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
 
   def noSuchTableError(nameParts: Seq[String]): Throwable = {
     new NoSuchTableException(nameParts)
+  }
+
+  def noSuchViewError(ident: Identifier): Throwable = {
+    new NoSuchViewException(ident)
   }
 
   def noSuchNamespaceError(namespace: Array[String]): Throwable = {
@@ -2848,13 +2852,13 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
   }
 
   def recursiveViewDetectedError(
-      viewIdent: TableIdentifier,
-      newPath: Seq[TableIdentifier]): Throwable = {
+      viewIdent: String,
+      newPath: Seq[String]): Throwable = {
     new AnalysisException(
       errorClass = "RECURSIVE_VIEW",
       messageParameters = Map(
-        "viewIdent" -> toSQLId(viewIdent.nameParts),
-        "newPath" -> newPath.map(p => toSQLId(p.nameParts)).mkString(" -> ")))
+        "viewIdent" -> toSQLId(viewIdent),
+        "newPath" -> newPath.map(p => toSQLId(p)).mkString(" -> ")))
   }
 
   def notAllowedToCreatePermanentViewWithoutAssigningAliasForExpressionError(
@@ -3704,4 +3708,12 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
         "supported" -> "constant expressions"),
       cause = cause)
   }
+
+  def cannotUnsetNonExistentViewProperty(ident: Identifier, property: String): Throwable =
+    throw new AnalysisException(
+      s"Attempted to unset non-existent property '$property' in view $ident")
+
+  def cannotMoveViewBetweenCatalogs(oldCatalog: String, newCatalog: String): Throwable =
+    throw new AnalysisException(
+      s"Cannot move view between catalogs: from=$oldCatalog and to=$newCatalog")
 }

@@ -23,7 +23,7 @@ import java.util.Collections
 import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.AnalysisException
-import org.apache.spark.sql.catalyst.analysis.{AsOfTimestamp, AsOfVersion, NamedRelation, NoSuchDatabaseException, NoSuchFunctionException, NoSuchNamespaceException, NoSuchTableException, TimeTravelSpec}
+import org.apache.spark.sql.catalyst.analysis.{AsOfTimestamp, AsOfVersion, NamedRelation, NoSuchDatabaseException, NoSuchFunctionException, NoSuchNamespaceException, NoSuchTableException, NoSuchViewException, TimeTravelSpec}
 import org.apache.spark.sql.catalyst.expressions.Literal
 import org.apache.spark.sql.catalyst.plans.logical.{SerdeInfo, TableSpec}
 import org.apache.spark.sql.catalyst.util.GeneratedColumn
@@ -354,6 +354,16 @@ private[sql] object CatalogV2Util {
     } else {
       catalog.asTableCatalog.loadTable(ident)
     }
+  }
+
+  def loadView(catalog: CatalogPlugin, ident: Identifier): Option[View] = catalog match {
+    case viewCatalog: ViewCatalog =>
+      try {
+        Option(viewCatalog.loadView(ident))
+      } catch {
+        case _: NoSuchViewException => None
+      }
+    case _ => None
   }
 
   def loadFunction(catalog: CatalogPlugin, ident: Identifier): Option[UnboundFunction] = {

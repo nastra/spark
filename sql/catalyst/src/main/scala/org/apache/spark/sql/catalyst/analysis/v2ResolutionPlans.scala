@@ -24,7 +24,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{LeafNode, Statistics}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{TreePattern, UNRESOLVED_FUNC}
 import org.apache.spark.sql.catalyst.types.DataTypeUtils.toAttributes
 import org.apache.spark.sql.catalyst.util.CharVarcharUtils
-import org.apache.spark.sql.connector.catalog.{CatalogPlugin, FunctionCatalog, Identifier, Table, TableCatalog}
+import org.apache.spark.sql.connector.catalog.{CatalogPlugin, FunctionCatalog, Identifier, Table, TableCatalog, View => V2View, ViewCatalog}
 import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
 import org.apache.spark.sql.connector.catalog.TableChange.ColumnPosition
 import org.apache.spark.sql.connector.catalog.functions.UnboundFunction
@@ -165,6 +165,13 @@ object ResolvedTable {
     val schema = CharVarcharUtils.replaceCharVarcharWithStringInSchema(table.columns.asSchema)
     ResolvedTable(catalog, identifier, table, toAttributes(schema))
   }
+}
+
+case class ResolvedV2View(
+    catalog: ViewCatalog,
+    identifier: Identifier,
+    view: V2View) extends LeafNodeWithoutStats {
+  override def output: Seq[Attribute] = Nil
 }
 
 case class ResolvedPartitionSpec(

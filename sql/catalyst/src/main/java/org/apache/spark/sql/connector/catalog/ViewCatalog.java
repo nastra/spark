@@ -71,7 +71,7 @@ public interface ViewCatalog extends CatalogPlugin {
    * @return an array of Identifiers for views
    * @throws NoSuchNamespaceException If the namespace does not exist (optional).
    */
-  Identifier[] listViews(String... namespace) throws NoSuchNamespaceException;
+  Identifier[] listViews(String[] namespace) throws NoSuchNamespaceException;
 
   /**
    * Load view metadata by {@link Identifier ident} from the catalog.

@@ -32,7 +32,7 @@ import org.apache.spark.sql.catalyst.expressions.Literal.TrueLiteral
 import org.apache.spark.sql.catalyst.planning.PhysicalOperation
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.util.{toPrettySQL, GeneratedColumn, ResolveDefaultColumns, V2ExpressionBuilder}
-import org.apache.spark.sql.connector.catalog.{Identifier, StagingTableCatalog, SupportsDeleteV2, SupportsNamespaces, SupportsPartitionManagement, SupportsWrite, Table, TableCapability, TableCatalog, TruncatableTable}
+import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier, StagingTableCatalog, SupportsDeleteV2, SupportsNamespaces, SupportsPartitionManagement, SupportsWrite, Table, TableCapability, TableCatalog, TruncatableTable}
 import org.apache.spark.sql.connector.catalog.CatalogV2Util.structTypeToV2Columns
 import org.apache.spark.sql.connector.catalog.index.SupportsIndex
 import org.apache.spark.sql.connector.expressions.{FieldReference, LiteralValue}
@@ -53,6 +53,8 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
 
   import DataSourceV2Implicits._
   import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
+
+  val catalogManager: CatalogManager = session.sessionState.catalogManager
 
   private def withProjectAndFilter(
       project: Seq[NamedExpression],
@@ -530,6 +532,49 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
         userScope,
         systemScope,
         pattern) :: Nil
+
+    case c: CreateV2View =>
+      CreateViewExec(
+        c.catalog,
+        c.ident,
+        c.sql,
+        catalogManager.currentCatalog.name,
+        catalogManager.currentNamespace,
+        c.comment,
+        c.viewSchema,
+        c.queryColumnNames,
+        c.columnAliases,
+        c.columnComments,
+        c.properties,
+        c.allowExisting,
+        c.replace) :: Nil
+
+    case d@DescribeV2View(desc, isExtended) =>
+      DescribeViewExec(d.output, desc, isExtended) :: Nil
+
+    case show@ShowCreateV2View(view) =>
+      ShowCreateViewExec(show.output, view) :: Nil
+
+    case show@ShowV2ViewProperties(view, propertyKey) =>
+      ShowViewPropertiesExec(show.output, view, propertyKey) :: Nil
+
+    case RefreshView(catalog, ident) =>
+      RefreshViewExec(catalog, ident) :: Nil
+
+    case ShowViews(ResolvedNamespace(catalog, ns), pattern, output) =>
+      ShowViewsExec(output, catalog.asViewCatalog, ns, pattern) :: Nil
+
+    case DropView(ResolvedIdentifier(catalog, ident), ifExists) =>
+      DropViewExec(catalog.asViewCatalog, ident, ifExists) :: Nil
+
+    case DropV2View(catalog, ident, ifExists) =>
+      DropViewExec(catalog, ident, ifExists) :: Nil
+
+    case RenameV2View(catalog, oldIdent, newIdent) =>
+      RenameViewExec(catalog, oldIdent, newIdent) :: Nil
+
+    case AlterV2View(catalog, ident, changes) =>
+      AlterViewExec(catalog, ident, changes) :: Nil
 
     case _ => Nil
   }
