@@ -27,6 +27,8 @@ import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier, Looku
 class ResolveCatalogs(val catalogManager: CatalogManager)
   extends Rule[LogicalPlan] with LookupCatalog {
 
+  import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
+
   override def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
     case UnresolvedIdentifier(nameParts, allowTemp) =>
       if (allowTemp && catalogManager.v1SessionCatalog.isTempView(nameParts)) {
@@ -50,5 +52,15 @@ class ResolveCatalogs(val catalogManager: CatalogManager)
       ResolvedNamespace(currentCatalog, Seq.empty[String])
     case UnresolvedNamespace(CatalogAndNamespace(catalog, ns)) =>
       ResolvedNamespace(catalog, ns)
+    case DescribeRelation(ResolvedV2View(_, ident, view), _, isExtended, _) =>
+      DescribeV2View(V2ViewDescription(ident.quoted, view), isExtended)
+    case ShowCreateTable(ResolvedV2View(_, ident, view), _, _) =>
+      ShowCreateV2View(V2ViewDescription(ident.quoted, view))
+    case ShowTableProperties(ResolvedV2View(_, ident, view), propertyKeys, _) =>
+      ShowV2ViewProperties(V2ViewDescription(ident.quoted, view), propertyKeys)
+    case RefreshTable(ResolvedV2View(catalog, ident, _)) =>
+      RefreshView(catalog, ident)
+    case DropView(ResolvedV2View(catalog, ident, _), ifExists) =>
+      DropV2View(catalog, ident, ifExists)
   }
 }

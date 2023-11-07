@@ -442,17 +442,17 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
       origin = t.origin)
   }
 
-  def insertIntoViewNotAllowedError(identifier: TableIdentifier, t: TreeNode[_]): Throwable = {
+  def insertIntoViewNotAllowedError(identifier: String, t: TreeNode[_]): Throwable = {
     new AnalysisException(
       errorClass = "_LEGACY_ERROR_TEMP_1010",
-      messageParameters = Map("identifier" -> identifier.toString),
+      messageParameters = Map("identifier" -> identifier),
       origin = t.origin)
   }
 
-  def writeIntoViewNotAllowedError(identifier: TableIdentifier, t: TreeNode[_]): Throwable = {
+  def writeIntoViewNotAllowedError(identifier: String, t: TreeNode[_]): Throwable = {
     new AnalysisException(
       errorClass = "_LEGACY_ERROR_TEMP_1011",
-      messageParameters = Map("identifier" -> identifier.toString),
+      messageParameters = Map("identifier" -> identifier),
       origin = t.origin)
   }
 
@@ -2848,13 +2848,13 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
   }
 
   def recursiveViewDetectedError(
-      viewIdent: TableIdentifier,
-      newPath: Seq[TableIdentifier]): Throwable = {
+      viewIdent: String,
+      newPath: Seq[String]): Throwable = {
     new AnalysisException(
       errorClass = "RECURSIVE_VIEW",
       messageParameters = Map(
-        "viewIdent" -> toSQLId(viewIdent.nameParts),
-        "newPath" -> newPath.map(p => toSQLId(p.nameParts)).mkString(" -> ")))
+        "viewIdent" -> toSQLId(viewIdent),
+        "newPath" -> newPath.map(p => toSQLId(p)).mkString(" -> ")))
   }
 
   def notAllowedToCreatePermanentViewWithoutAssigningAliasForExpressionError(

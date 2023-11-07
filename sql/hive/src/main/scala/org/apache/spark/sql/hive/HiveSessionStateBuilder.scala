@@ -25,7 +25,7 @@ import org.apache.hadoop.hive.ql.exec.{UDAF, UDF}
 import org.apache.hadoop.hive.ql.udf.generic.{AbstractGenericUDAFResolver, GenericUDF, GenericUDTF}
 
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.analysis.{Analyzer, EvalSubqueriesForTimeTravel, ReplaceCharWithVarchar, ResolveSessionCatalog}
+import org.apache.spark.sql.catalyst.analysis.{Analyzer, CreateViewAnalysis, EvalSubqueriesForTimeTravel, ReplaceCharWithVarchar, ResolveSessionCatalog}
 import org.apache.spark.sql.catalyst.catalog.{ExternalCatalogWithListener, InvalidUDFClassException}
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
@@ -90,6 +90,7 @@ class HiveSessionStateBuilder(
       new ResolveHiveSerdeTable(session) +:
         new FindDataSourceTable(session) +:
         new ResolveSQLOnFile(session) +:
+        CreateViewAnalysis(catalogManager, createQueryExecution) +:
         new FallBackFileSourceV2(session) +:
         ResolveEncodersInScalaAgg +:
         new ResolveSessionCatalog(catalogManager) +:

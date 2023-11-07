@@ -218,15 +218,11 @@ class ResolveSessionCatalog(val catalogManager: CatalogManager)
     case DropTable(ResolvedIdentifier(FakeSystemCatalog, ident), _, _) =>
       DropTempViewCommand(ident)
 
-    case DropView(ResolvedV1Identifier(ident), ifExists) =>
+    case DropView(ResolvedV1Identifier(ident), ifExists) if conf.useV1Command =>
       DropTableCommand(ident, ifExists, isView = true, purge = false)
 
-    case DropView(r @ ResolvedIdentifier(catalog, ident), _) =>
-      if (catalog == FakeSystemCatalog) {
+    case DropView(ResolvedIdentifier(FakeSystemCatalog, ident), _) =>
         DropTempViewCommand(ident)
-      } else {
-        throw QueryCompilationErrors.catalogOperationNotSupported(catalog, "views")
-      }
 
     case c @ CreateNamespace(DatabaseNameInSessionCatalog(name), _, _) if conf.useV1Command =>
       val comment = c.properties.get(SupportsNamespaces.PROP_COMMENT)
@@ -380,15 +376,11 @@ class ResolveSessionCatalog(val catalogManager: CatalogManager)
         replace = replace,
         viewType = PersistedView)
 
-    case CreateView(ResolvedIdentifier(catalog, _), _, _, _, _, _, _, _) =>
+    case CreateView(ResolvedIdentifier(catalog, _), _, _, _, _, _, _, _) if conf.useV1Command =>
       throw QueryCompilationErrors.missingCatalogAbilityError(catalog, "views")
 
-    case ShowViews(ns: ResolvedNamespace, pattern, output) =>
-      ns match {
-        case DatabaseInSessionCatalog(db) => ShowViewsCommand(db, pattern, output)
-        case _ =>
-          throw QueryCompilationErrors.missingCatalogAbilityError(ns.catalog, "views")
-      }
+    case ShowViews(DatabaseInSessionCatalog(db), pattern, output) if conf.useV1Command =>
+      ShowViewsCommand(db, pattern, output)
 
     // If target is view, force use v1 command
     case ShowTableProperties(ResolvedViewIdentifier(ident), propertyKey, output) =>

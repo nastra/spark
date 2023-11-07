@@ -107,6 +107,13 @@ private[sql] object CatalogV2Implicits {
       case _ =>
         throw QueryCompilationErrors.missingCatalogAbilityError(plugin, "functions")
     }
+
+    def asViewCatalog: ViewCatalog = plugin match {
+      case viewCatalog: ViewCatalog =>
+        viewCatalog
+      case _ =>
+        throw QueryCompilationErrors.missingCatalogAbilityError(plugin, "views")
+    }
   }
 
   implicit class NamespaceHelper(namespace: Array[String]) {
