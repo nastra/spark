@@ -555,11 +555,20 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
     case show@ShowCreateV2View(view) =>
       ShowCreateViewExec(show.output, view) :: Nil
 
+    case show@ShowV2ViewProperties(view, propertyKey) =>
+      ShowViewPropertiesExec(show.output, view, propertyKey) :: Nil
+
     case RefreshView(catalog, ident) =>
       RefreshViewExec(catalog, ident) :: Nil
 
     case ShowViews(ResolvedNamespace(catalog, ns), pattern, output) =>
       ShowViewsExec(output, catalog.asViewCatalog, ns, pattern) :: Nil
+
+    case DropView(ResolvedIdentifier(catalog, ident), ifExists) =>
+      DropViewExec(catalog.asViewCatalog, ident, ifExists) :: Nil
+
+    case DropV2View(catalog, ident, ifExists) =>
+      DropViewExec(catalog, ident, ifExists) :: Nil
 
     case _ => Nil
   }

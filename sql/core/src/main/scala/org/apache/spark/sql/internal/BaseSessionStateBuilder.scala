@@ -189,7 +189,7 @@ abstract class BaseSessionStateBuilder(
     override val extendedResolutionRules: Seq[Rule[LogicalPlan]] =
       new FindDataSourceTable(session) +:
         new ResolveSQLOnFile(session) +:
-        CreateViewAnalysis(catalogManager, createQueryExecution) +:
+        CreateViewAnalysis(session) +:
         new FallBackFileSourceV2(session) +:
         ResolveEncodersInScalaAgg +:
         new ResolveSessionCatalog(catalogManager) +:

@@ -17,12 +17,12 @@
 
 package org.apache.spark.sql.catalyst.analysis
 
-import org.apache.spark.sql.AnalysisException
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.FunctionIdentifier
-import org.apache.spark.sql.catalyst.expressions.Alias
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute}
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier, LookupCatalog, ViewCatalog}
+import org.apache.spark.sql.connector.catalog.{CatalogManager, CatalogPlugin, Identifier, LookupCatalog, View, ViewCatalog}
 import org.apache.spark.sql.errors.QueryCompilationErrors
 import org.apache.spark.sql.execution.{CommandExecutionMode, QueryExecution}
 import org.apache.spark.sql.execution.command.ViewHelper
@@ -33,10 +33,10 @@ import org.apache.spark.sql.util.SchemaUtils
 /**
  * Resolve views in CREATE VIEW and ALTER VIEW AS plans and convert them to logical plans.
  */
-case class CreateViewAnalysis(
-    override val catalogManager: CatalogManager,
-    executePlan: (LogicalPlan, CommandExecutionMode.Value) => QueryExecution)
+case class CreateViewAnalysis(spark: SparkSession)
   extends Rule[LogicalPlan] with LookupCatalog {
+
+  protected lazy val catalogManager: CatalogManager = spark.sessionState.catalogManager
 
   import org.apache.spark.sql.connector.catalog.CatalogV2Implicits._
 
@@ -44,12 +44,25 @@ case class CreateViewAnalysis(
     (nameParts: Seq[String]) => catalogManager.v1SessionCatalog.isTempView(nameParts)
   private lazy val isTemporaryFunction = catalogManager.v1SessionCatalog.isTemporaryFunction _
 
-  def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
+  def asViewCatalog(plugin: CatalogPlugin): ViewCatalog = plugin match {
+    case viewCatalog: ViewCatalog =>
+      viewCatalog
+    case _ =>
+      throw QueryCompilationErrors.missingCatalogAbilityError(plugin, "views")
+  }
 
+  case class ResolvedV2View(
+      catalog: ViewCatalog,
+      identifier: Identifier,
+      view: View) extends LeafNodeWithoutStats {
+    override def output: Seq[Attribute] = Nil
+  }
+
+  def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperators {
     case CreateView(ResolvedIdentifier(catalog, nameParts), userSpecifiedColumns, comment,
     properties, originalText, child, allowExisting, replace) =>
       convertCreateView(
-        catalog = catalog.asViewCatalog,
+        catalog = asViewCatalog(catalog),
         ident = nameParts,
         userSpecifiedColumns = userSpecifiedColumns,
         comment = comment,
@@ -85,7 +98,8 @@ case class CreateViewAnalysis(
                                  child: LogicalPlan,
                                  allowExisting: Boolean,
                                  replace: Boolean): LogicalPlan = {
-    val qe = executePlan(child, CommandExecutionMode.SKIP)
+
+    val qe = new QueryExecution(spark, child, mode = CommandExecutionMode.SKIP)
     qe.assertAnalyzed()
     val analyzedPlan = qe.analyzed
 
@@ -153,7 +167,8 @@ case class CreateViewAnalysis(
           val meta = new MetadataBuilder().putString("comment", colComment).build()
           Alias(attr, colName)(explicitMetadata = Some(meta))
       }
-      executePlan(Project(projectList, analyzedPlan), CommandExecutionMode.SKIP).analyzed
+      new QueryExecution(spark, Project(projectList, analyzedPlan),
+        mode = CommandExecutionMode.SKIP).analyzed
     }
   }
 
