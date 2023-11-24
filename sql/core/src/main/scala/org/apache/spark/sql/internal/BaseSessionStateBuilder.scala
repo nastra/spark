@@ -184,6 +184,7 @@ abstract class BaseSessionStateBuilder(
    */
   protected def analyzer: Analyzer = new Analyzer(catalogManager) {
     override val extendedSubstitutionRules: Seq[Rule[LogicalPlan]] =
+      ViewSubstitution(sqlParser) +:
       customSubstitutionRules
 
     override val extendedResolutionRules: Seq[Rule[LogicalPlan]] =

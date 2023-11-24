@@ -239,11 +239,6 @@ class Analyzer(override val catalogManager: CatalogManager) extends RuleExecutor
       maxIterationsSetting = SQLConf.ANALYZER_MAX_ITERATIONS.key)
 
   /**
-   * Override to provide additional rules for the "Substitution" batch.
-   */
-  val extendedSubstitutionRules: Seq[Rule[LogicalPlan]] = Nil
-
-  /**
    * Override to provide additional rules for the "Resolution" batch.
    */
   val extendedResolutionRules: Seq[Rule[LogicalPlan]] = Nil
