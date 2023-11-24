@@ -541,7 +541,7 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
         catalogManager.currentCatalog.name,
         catalogManager.currentNamespace,
         c.comment,
-        c.schema,
+        c.viewSchema,
         c.queryColumnNames,
         c.columnAliases,
         c.columnComments,
