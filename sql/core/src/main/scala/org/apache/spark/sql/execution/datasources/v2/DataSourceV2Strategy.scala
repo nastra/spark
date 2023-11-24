@@ -570,6 +570,12 @@ class DataSourceV2Strategy(session: SparkSession) extends Strategy with Predicat
     case DropV2View(catalog, ident, ifExists) =>
       DropViewExec(catalog, ident, ifExists) :: Nil
 
+    case RenameV2View(catalog, oldIdent, newIdent) =>
+      RenameViewExec(catalog, oldIdent, newIdent) :: Nil
+
+    case AlterV2View(catalog, ident, changes) =>
+      AlterViewExec(catalog, ident, changes) :: Nil
+
     case _ => Nil
   }
 }

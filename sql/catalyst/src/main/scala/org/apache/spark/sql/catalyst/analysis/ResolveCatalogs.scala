@@ -19,7 +19,8 @@ package org.apache.spark.sql.catalyst.analysis
 
 import org.apache.spark.sql.catalyst.plans.logical._
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier, LookupCatalog}
+import org.apache.spark.sql.connector.catalog.{CatalogManager, Identifier, LookupCatalog, ViewChange}
+import org.apache.spark.sql.errors.QueryCompilationErrors
 
 /**
  * Resolves the catalog of the name parts for table/view/function/namespace.
@@ -62,5 +63,26 @@ class ResolveCatalogs(val catalogManager: CatalogManager)
       RefreshView(catalog, ident)
     case DropView(ResolvedV2View(catalog, ident, _), ifExists) =>
       DropV2View(catalog, ident, ifExists)
+    case SetViewProperties(ResolvedV2View(catalog, ident, _), props) =>
+      val changes = props.map {
+        case (property, value) => ViewChange.setProperty(property, value)
+      }.toSeq
+      AlterV2View(catalog, ident, changes)
+    case UnsetViewProperties(ResolvedV2View(catalog, ident, _), propertyKeys, ifExists) =>
+      if (!ifExists) {
+        val view = catalog.loadView(ident)
+        propertyKeys.filterNot(view.properties.containsKey).foreach { property =>
+          QueryCompilationErrors.cannotUnsetNonExistentViewProperty(ident, property)
+        }
+      }
+      val changes = propertyKeys.map(ViewChange.removeProperty)
+      AlterV2View(catalog, ident, changes)
+    case RenameTable(ResolvedV2View(oldCatalog, oldIdent, _),
+    NonSessionCatalogAndIdentifier(newCatalog, newIdent), true) =>
+      if (oldCatalog.name != newCatalog.name) {
+        QueryCompilationErrors.cannotMoveViewBetweenCatalogs(
+          oldCatalog.name, newCatalog.name)
+      }
+      RenameV2View(oldCatalog, oldIdent, newIdent)
   }
 }

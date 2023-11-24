@@ -1479,6 +1479,14 @@ case class DropV2View(
     ifExists: Boolean) extends LeafCommand
 
 /**
+ * The logical plan of the ALTER VIEW RENAME command for v2 views.
+ */
+case class RenameV2View(
+    catalog: ViewCatalog,
+    oldIdent: Identifier,
+    newIdent: Identifier) extends LeafCommand
+
+/**
  * Describe a view in a v2 catalog.
  */
 case class DescribeV2View(desc: V2ViewDescription, isExtended: Boolean) extends LeafCommand {
@@ -1508,3 +1516,11 @@ case class ShowV2ViewProperties(
  * Refresh a view
  */
 case class RefreshView(catalog: ViewCatalog, ident: Identifier) extends LeafCommand
+
+/**
+ * Alter a view in a v2 catalog.
+ */
+case class AlterV2View(
+    catalog: ViewCatalog,
+    ident: Identifier,
+    changes: Seq[ViewChange]) extends LeafCommand

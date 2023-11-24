@@ -3708,4 +3708,12 @@ private[sql] object QueryCompilationErrors extends QueryErrorsBase with Compilat
         "supported" -> "constant expressions"),
       cause = cause)
   }
+
+  def cannotUnsetNonExistentViewProperty(ident: Identifier, property: String): Throwable =
+    throw new AnalysisException(
+      s"Attempted to unset non-existent property '$property' in view $ident")
+
+  def cannotMoveViewBetweenCatalogs(oldCatalog: String, newCatalog: String): Throwable =
+    throw new AnalysisException(
+      s"Cannot move view between catalogs: from=$oldCatalog and to=$newCatalog")
 }
